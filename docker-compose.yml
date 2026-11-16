@@ -1,0 +1,32 @@
+services:
+  external-a2a-agent:
+    build: ./external_a2a_agent
+    container_name: external-a2a-agent
+    ports:
+      - "9000:9000"
+    environment:
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - GROQ_MODEL=${GROQ_MODEL:-groq/llama-3.3-70b-versatile}
+      - A2A_BEARER_TOKEN=${EXTERNAL_A2A_TOKEN:-a2a-shared-bearer-token-7766}
+      - REMOTE_MCP_URL=${REMOTE_MCP_URL:-https://mcpplaygroundonline.com/mcp-complex-server}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/.well-known/agent-card.json"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  internal-crew-service:
+    build: ./internal_crew_service
+    container_name: internal-crew-service
+    ports:
+      - "8000:8000"
+    environment:
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - GROQ_MODEL=${GROQ_MODEL:-groq/llama-3.3-70b-versatile}
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY:-prod-internal-secret-key-9988}
+      - EXTERNAL_A2A_ENDPOINT=http://external-a2a-agent:9000/.well-known/agent-card.json
+      - EXTERNAL_A2A_TOKEN=${EXTERNAL_A2A_TOKEN:-a2a-shared-bearer-token-7766}
+      - EXTERNAL_A2A_TIMEOUT=${EXTERNAL_A2A_TIMEOUT:-90}
+    depends_on:
+      external-a2a-agent:
+        condition: service_healthy
